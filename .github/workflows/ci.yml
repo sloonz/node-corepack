@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26'
+          package-manager-cache: false
+      - run: npm test
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - name: Resolve Corepack
+        run: |
+          node --input-type=module <<'JS'
+          import { appendFileSync } from 'node:fs';
+          import { latestCorepack } from './scripts/sync.mjs';
+          appendFileSync(process.env.GITHUB_ENV, `COREPACK_VERSION=${await latestCorepack()}\n`);
+          JS
+      - name: Build test image
+        run: |
+          docker buildx build --load --platform linux/amd64 \
+            --build-arg COREPACK_VERSION="$COREPACK_VERSION" \
+            --tag node-corepack:test .
+      - name: Check Node, Alpine, Corepack, and shims
+        env:
+          IMAGE: node-corepack:test
+        run: node scripts/sync.mjs --smoke

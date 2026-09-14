@@ -1,0 +1,11 @@
+{
+  "name": "node-corepack",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "node --test",
+    "discover": "node scripts/sync.mjs --discover",
+    "sync": "node scripts/sync.mjs"
+  }
+}
